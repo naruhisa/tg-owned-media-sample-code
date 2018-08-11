@@ -41,7 +41,7 @@
           </descriptorRefs>
           <archive>
             <manifest>
-                <mainClass>com.example.dataproc.sample.WordCountDriver</mainClass>
+                <mainClass>com.example.dataproc.sample.WordCount</mainClass>
             </manifest>
           </archive>
         </configuration>
