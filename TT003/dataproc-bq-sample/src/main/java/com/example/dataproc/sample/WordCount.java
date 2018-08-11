@@ -2,9 +2,12 @@ package com.example.dataproc.sample;
 
 import java.io.IOException;
 import java.util.StringTokenizer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -17,19 +20,23 @@ import com.google.cloud.hadoop.io.bigquery.BigQueryConfiguration;
 import com.google.cloud.hadoop.io.bigquery.GsonBigQueryInputFormat;
 
 public class WordCount {
-
   public static class TokenizerMapper
-       extends Mapper<Object, Text, Text, IntWritable>{
+       extends Mapper<LongWritable, JsonObject, Text, IntWritable>{
 
     private final static IntWritable one = new IntWritable(1);
     private Text word = new Text();
 
-    public void map(Object key, Text value, Context context
+    public void map(LongWritable key, JsonObject value, Context context
                     ) throws IOException, InterruptedException {
-      StringTokenizer itr = new StringTokenizer(value.toString());
-      while (itr.hasMoreTokens()) {
-        word.set(itr.nextToken());
-        context.write(word, one);
+      // "title" の内容を取得する
+      JsonElement titleElement = value.get("title");
+      // "title" をトークナイズし、カウントする
+      if (titleElement != null) {
+        StringTokenizer itr = new StringTokenizer(titleElement.getAsString());
+        while (itr.hasMoreTokens()) {
+          word.set(itr.nextToken());
+          context.write(word, one);
+        }
       }
     }
   }
@@ -56,6 +63,7 @@ public class WordCount {
     // プロジェクトIDを設定する。
     String projectId = args[0];
     conf.set(BigQueryConfiguration.PROJECT_ID_KEY, projectId);
+
 
     Job job = Job.getInstance(conf, "word count");
     job.setJarByClass(WordCount.class);
