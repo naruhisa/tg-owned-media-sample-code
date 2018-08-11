@@ -13,6 +13,9 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
+import com.google.cloud.hadoop.io.bigquery.BigQueryConfiguration;
+import com.google.cloud.hadoop.io.bigquery.GsonBigQueryInputFormat;
+
 public class WordCount {
 
   public static class TokenizerMapper
@@ -49,6 +52,11 @@ public class WordCount {
 
   public static void main(String[] args) throws Exception {
     Configuration conf = new Configuration();
+
+    // プロジェクトIDを設定する。
+    String projectId = args[0];
+    conf.set(BigQueryConfiguration.PROJECT_ID_KEY, projectId);
+
     Job job = Job.getInstance(conf, "word count");
     job.setJarByClass(WordCount.class);
     job.setMapperClass(TokenizerMapper.class);
@@ -56,7 +64,14 @@ public class WordCount {
     job.setReducerClass(IntSumReducer.class);
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(IntWritable.class);
-    FileInputFormat.addInputPath(job, new Path(args[0]));
+
+    // 入力に使用する BigQuery のテーブルを指定する。
+    // 指定方法は、 [optional-projectId]:[datasetId].[tableId] の形式
+    String inputQualifiedTableId = "bigquery-public-data:samples.wikipedia";
+    BigQueryConfiguration.configureBigQueryInput(conf, inputQualifiedTableId);
+
+    job.setInputFormatClass(GsonBigQueryInputFormat.class);
+
     FileOutputFormat.setOutputPath(job, new Path(args[1]));
     System.exit(job.waitForCompletion(true) ? 0 : 1);
   }
