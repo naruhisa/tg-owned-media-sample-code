@@ -28,14 +28,23 @@ public class WordCount {
 
     public void map(LongWritable key, JsonObject value, Context context
                     ) throws IOException, InterruptedException {
-      // "title" の内容を取得する
-      JsonElement titleElement = value.get("title");
-      // "title" をトークナイズし、カウントする
-      if (titleElement != null) {
-        StringTokenizer itr = new StringTokenizer(titleElement.getAsString());
-        while (itr.hasMoreTokens()) {
-          word.set(itr.nextToken());
-          context.write(word, one);
+
+      // "repository.name" を String として取得する
+      JsonElement reposElement = value.get("repository");
+
+      if (reposElement != null) {
+        JsonObject reposObject = reposElement.getAsJsonObject();
+        JsonElement nameElement = reposObject.get("name");
+
+        if (nameElement != null) {
+          String reposName = nameElement.getAsString();
+
+          // "name" をトークナイズし、カウントする
+          StringTokenizer itr = new StringTokenizer(reposName);
+          while (itr.hasMoreTokens()) {
+            word.set(itr.nextToken());
+            context.write(word, one);
+          }
         }
       }
     }
@@ -63,7 +72,9 @@ public class WordCount {
     // プロジェクトIDを設定する。
     String projectId = args[0];
     conf.set(BigQueryConfiguration.PROJECT_ID_KEY, projectId);
-
+    // 入力に使用する BigQuery のテーブルを指定する。
+    // テーブル指定は [projectId]:[datasetId].[tableId] の形式
+    BigQueryConfiguration.configureBigQueryInput(conf, "bigquery-public-data:samples.github_nested");
 
     Job job = Job.getInstance(conf, "word count");
     job.setJarByClass(WordCount.class);
@@ -72,14 +83,7 @@ public class WordCount {
     job.setReducerClass(IntSumReducer.class);
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(IntWritable.class);
-
-    // 入力に使用する BigQuery のテーブルを指定する。
-    // 指定方法は、 [optional-projectId]:[datasetId].[tableId] の形式
-    String inputQualifiedTableId = "bigquery-public-data:samples.wikipedia";
-    BigQueryConfiguration.configureBigQueryInput(conf, inputQualifiedTableId);
-
     job.setInputFormatClass(GsonBigQueryInputFormat.class);
-
     FileOutputFormat.setOutputPath(job, new Path(args[1]));
     System.exit(job.waitForCompletion(true) ? 0 : 1);
   }
