@@ -18,7 +18,7 @@
     <dependency>
         <groupId>com.google.cloud.bigdataoss</groupId>
         <artifactId>bigquery-connector</artifactId>
-        <version>hadoop2-0.13.5</version>
+        <version>hadoop2-0.13.8</version>
     </dependency>
   </dependencies>
 
