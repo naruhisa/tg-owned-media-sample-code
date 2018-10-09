@@ -77,7 +77,7 @@ public class WordCount {
   }
 
   public static class IntSumReducer
-       extends Reducer<Text,IntWritable,JsonObject,NullWritable> {
+      extends Reducer<Text,IntWritable,JsonObject,NullWritable> {
 
     public void reduce(Text key, Iterable<IntWritable> values,
                        Context context
@@ -88,6 +88,7 @@ public class WordCount {
         sum += val.get();
       }
 
+      // 結果を格納した JsonObject を作成する。
       JsonObject jsonObject = new JsonObject();
       jsonObject.addProperty("Word", key.toString());
       jsonObject.addProperty("Count", sum);
@@ -104,14 +105,15 @@ public class WordCount {
     conf.set(BigQueryConfiguration.PROJECT_ID_KEY, projectId);
 
     // 出力用 Bigquery テーブルのidを設定
+    // テーブル指定は ([projectId]:)[datasetId].[tableId] の形式//
     String outputQualifiedTableId = "wordcount_dataset.wordcount_table";
     String outputGcsPath = "gs://dataproc-bq-sample-2/jobs";
 
     // 入力に使用する BigQuery のテーブルを指定する。
-    // テーブル指定は [projectId]:[datasetId].[tableId] の形式
+    // テーブル指定は ([projectId]:)[datasetId].[tableId] の形式
     BigQueryConfiguration.configureBigQueryInput(conf, "bigquery-public-data:samples.github_nested");
 
-    // 出力を設定する
+    // BigQuery出力を設定する
     BigQueryOutputConfiguration.configureWithAutoSchema(
         conf,
         outputQualifiedTableId,
@@ -121,17 +123,15 @@ public class WordCount {
 
     Job job = Job.getInstance(conf, "word count");
     job.setJarByClass(WordCount.class);
+
     job.setMapperClass(TokenizerMapper.class);
-    job.setCombinerClass(IntSumReducer.class);
     job.setReducerClass(IntSumReducer.class);
-    job.setMapOutputKeyClass(Text.class);
-    job.setMapOutputValueClass(IntWritable.class);
-    job.setOutputKeyClass(JsonObject.class);
-    job.setOutputValueClass(NullWritable.class);
+
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(IntWritable.class);
+
     job.setInputFormatClass(GsonBigQueryInputFormat.class);
     job.setOutputFormatClass(IndirectBigQueryOutputFormat.class);
-
-    System.out.println(BigQueryOutputConfiguration.getGcsOutputPath(conf));
 
     System.exit(job.waitForCompletion(true) ? 0 : 1);
   }
